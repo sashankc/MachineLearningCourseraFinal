@@ -1,0 +1,102 @@
+---
+title: "Machine Learning Assignment - Coursera"
+author: "Sashank S. Tamhane"
+date: "November 12, 2016"
+output: html_document
+---
+
+**Synopsis:** 
+Personal fitness devices such as Fitbit, Jawbone Up, etc are used commonly to collect information about an individuals physical activity. These devices do a good job of capturing the duration of the activities however they do not necessarily  measure the quality of the workout. In this project accelerometers are placed on  belt, forearm, arm, and dumbell of 6 participant. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. The five ways are exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E). Only Class A corresponds to correct performance. The goal of this project is to predict the manner in which they did the exercise. 
+More information is available at http://groupware.les.inf.puc-rio.br/har 
+
+**Overall Approach**
+The overall approach primarily comprises of the steps below.
+
+* Acquiring Data and Cleaning the dataset
+* Testing different algorithms 
+* Predicting the output on the testing dataset.
+
+  
+**Acquiring Data and Cleaning the dataset**
+* Load the Data
+
+```{r Load Libraries and Data Sets}
+library(caret)
+library(rattle)
+library(rpart)
+library(randomForest)
+library(repmis)
+# loading data from the csv file, replacing blanks and NA as NA while loading the file
+testing <- read.csv("pml-testing.csv", na.strings = c("NA", ""))
+training <- read.csv("pml-training.csv", na.strings = c("NA", ""))
+
+# data cleaning, remove any rows that does not have data
+training <- training[,colSums(is.na(training))==0]
+testing <- testing[,colSums(is.na(testing))==0]
+```
+
+Training set has 19622 obs. of  160 variables
+Testing set has 20 obs. of  160 variables
+```{r Cleaning Data}
+# remove first 7 variable as it has no effect on the prediction
+trainData <- training[, -c(1:7)]
+testData <- testing[, -c(1:7)]
+
+# create a validation sample
+set.seed(7826) 
+inTrain <- createDataPartition(trainData$classe, p = 0.7, list = FALSE)
+train <- trainData[inTrain, ]
+validation <- trainData[-inTrain, ]
+```
+**Testing different algorithms**
+For K-fold validation, I was running out of memory by using the default value of k which is 10 hence decided to reduce the k value to 4.
+*  Classification and Regression, Recursive Partitioning (rpart) Algorithm
+```{r rpart}
+# use classification tree cross validation for generating model
+train_control <-trainControl(method="cv", number=5)
+model_cv <- train(classe~., data=train, method="rpart", trControl=train_control)
+
+# print the output
+print(model_cv)
+
+# draw the plot for the model
+fancyRpartPlot(model_cv$finalModel)
+
+# use the model for prediction
+predict_test<- predict(model_cv, validation)
+
+# use confusion matrix for measuring the accuracy
+conf_mat<-confusionMatrix(validation$classe, predict_test)
+print(conf_mat$overall[1])
+```
+*  Random Forest
+```{r Random Forest}
+
+## if we use random forest
+model_rf<-train(classe~., data=train, method="rf", trControl=train_control)
+
+# use the rf model for prediction
+predict_rf<- predict(model_rf, validation)
+
+# use confusion matrix for measuring the accuracy of rf
+conf_mat_rf<-confusionMatrix(validation$classe, predict_rf)
+print(conf_mat_rf$overall[1])
+```
+
+*## try some other models
+*   Lda Model
+```{r LDA}
+model_lda<-train(classe~., data=train, method="lda", trControl=train_control)
+predict_lda<- predict(model_lda, validation)
+
+# use confusion matrix for measuring the accuracy of lda
+conf_mat_lda<-confusionMatrix(validation$classe, predict_lda)
+print(conf_mat_lda$overall[1])
+```
+**Prediction the Testing dataset**
+Since it was established that the Random Forest Algorithm provides the most accurate result, we use this algorithm to run the prediction on the testing dataset.
+```{r Prediction Testing data}
+predict_outcome<-predict(model_rf, testData)
+print(predict_outcome)
+
+```
