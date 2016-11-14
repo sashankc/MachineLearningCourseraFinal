@@ -18,6 +18,7 @@ The overall approach primarily comprises of the steps below.
 
   
 **Acquiring Data and Cleaning the dataset**
+
 * Load the Data
 
 ```{r Load Libraries and Data Sets}
@@ -37,6 +38,7 @@ testing <- testing[,colSums(is.na(testing))==0]
 
 Training set has 19622 obs. of  160 variables
 Testing set has 20 obs. of  160 variables
+
 ```{r Cleaning Data}
 # remove first 7 variable as it has no effect on the prediction
 trainData <- training[, -c(1:7)]
@@ -48,8 +50,11 @@ inTrain <- createDataPartition(trainData$classe, p = 0.7, list = FALSE)
 train <- trainData[inTrain, ]
 validation <- trainData[-inTrain, ]
 ```
+
 **Testing different algorithms**
-For K-fold validation, I was running out of memory by using the default value of k which is 10 hence decided to reduce the k value to 4.
+
+For K-fold validation, I was running out of memory by using the default value of k which is 10 hence reduced the k value to 5 to help take with the computation.
+
 *  Classification and Regression, Recursive Partitioning (rpart) Algorithm
 ```{r rpart}
 # use classification tree cross validation for generating model
@@ -58,7 +63,10 @@ model_cv <- train(classe~., data=train, method="rpart", trControl=train_control)
 
 # print the output
 print(model_cv)
+```
 
+rpart algorithm plot
+```{r Plotting rpart}
 # draw the plot for the model
 fancyRpartPlot(model_cv$finalModel)
 
@@ -69,6 +77,9 @@ predict_test<- predict(model_cv, validation)
 conf_mat<-confusionMatrix(validation$classe, predict_test)
 print(conf_mat$overall[1])
 ```
+
+***
+
 *  Random Forest
 ```{r Random Forest}
 
@@ -83,7 +94,8 @@ conf_mat_rf<-confusionMatrix(validation$classe, predict_rf)
 print(conf_mat_rf$overall[1])
 ```
 
-*## try some other models
+***
+
 *   Lda Model
 ```{r LDA}
 model_lda<-train(classe~., data=train, method="lda", trControl=train_control)
@@ -93,8 +105,19 @@ predict_lda<- predict(model_lda, validation)
 conf_mat_lda<-confusionMatrix(validation$classe, predict_lda)
 print(conf_mat_lda$overall[1])
 ```
+
+***
+
+## Comparison table for accuracies from various models
+
+Algorithm | rpart | random Forest | lda 
+------ | ------ | ------ | ------ 
+Accuracy | ```r  conf_mat$overall[1] ``` | ```r conf_mat_rf$overall[1]  ``` |```r conf_mat_lda$overall[1]  ``` 
+
+
 **Prediction the Testing dataset**
-Since it was established that the Random Forest Algorithm provides the most accurate result, we use this algorithm to run the prediction on the testing dataset.
+
+As you can see that Random Forest Algorithm provides the most accurate result, hence we use this algorithm to run the prediction on the testing dataset.
 ```{r Prediction Testing data}
 predict_outcome<-predict(model_rf, testData)
 print(predict_outcome)
